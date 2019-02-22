@@ -10,7 +10,7 @@ import UIKit
 
 class TodoListViewController: UITableViewController {
 
-    let itemArray = ["Find Mike", "Buy Eggos", "Destroy Demogorgon"]
+    var itemArray = ["Find Mike", "Buy Eggos", "Destroy Demogorgon"]
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -62,5 +62,37 @@ class TodoListViewController: UITableViewController {
     
         
     }
+    
+    //MARK - Add New Items 
+    @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
+        
+        var textField = UITextField()
+        //creating local variable !
+    
+        let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
+        //creat a new alert once we press the + button
+        
+        let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
+            //create an action for the alert that we creat , simply we have to add item 
+            //print("Success!")\
+            self.itemArray.append(textField.text!)
+            //adding an item to our item array with focrce ! which means it wont be never nil also just becouse we are in clouse we have to add self. to explicete it where this item array exist
+            self.tableView.reloadData()
+            //once we create the new item , making the tableview to reload
+        }
+        
+        alert.addTextField { (alertTextField) in
+            alertTextField.placeholder = "Create new item"
+            //creating a space for adding a text when we press the + button
+            //print(alertTextField.text)
+            
+            textField = alertTextField
+        }
+        
+        alert.addAction(action)
+        present(alert, animated: true, completion: nil)
+    }
+    
+    
 }
 
