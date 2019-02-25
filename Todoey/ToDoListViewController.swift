@@ -12,10 +12,16 @@ class TodoListViewController: UITableViewController {
 
     var itemArray = ["Find Mike", "Buy Eggos", "Destroy Demogorgon"]
     
+    let defaults = UserDefaults.standard
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        
+        if let  items = defaults.array(forKey: "ToDoListArray") as? [String] {
+             //creating that our itemarray to be equal to the new constant defaults, where our NSDATA is saved
+            itemArray = items
+        }
+       
         
         
     
@@ -73,10 +79,13 @@ class TodoListViewController: UITableViewController {
         //creat a new alert once we press the + button
         
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
-            //create an action for the alert that we creat , simply we have to add item 
+            //create an action for the alert that we creat , simply we have to add item
             //print("Success!")\
             self.itemArray.append(textField.text!)
             //adding an item to our item array with focrce ! which means it wont be never nil also just becouse we are in clouse we have to add self. to explicete it where this item array exist
+            
+            self.defaults.set(self.itemArray,forKey: "ToDoListArray")
+            
             self.tableView.reloadData()
             //once we create the new item , making the tableview to reload
         }
