@@ -11,30 +11,26 @@ import UIKit
 class TodoListViewController: UITableViewController {
 
     var itemArray = [Item]()
-    
-    let defaults = UserDefaults.standard
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+    //creating obejct that provide interface to the file system using default file manager userDomainMask is users home directory place where we gonna save the personal item assosiate with this current app  /first is bc its array and we want to grab the first item / /.appendigPathComponent is creating our own Plist. !!!/*1 - making global constant in other for use to write a data .!!!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
+       
         
-        let newItem = Item()
-        newItem.title = "Find Mike"
-        itemArray.append(newItem)
+        print(dataFilePath)
         
-        let newItem2 = Item()
-        newItem2.title = "Buy Eggos"
-        itemArray.append(newItem2)
-
-        let newItem3 = Item()
-        newItem3.title = "Destroy Demogorgon"
-        itemArray.append(newItem3)
+       
+        
+        loadItems()
 
         
-        if let  items = defaults.array(forKey: "ToDoListArray") as? [Item] {
-             //creating that our itemarray to be equal to the new constant defaults, where our NSDATA is saved
-            itemArray = items
-        }
+//        if let  items = defaults.array(forKey: "ToDoListArray") as? [Item] {
+//             //creating that our itemarray to be equal to the new constant defaults, where our NSDATA is saved
+//            itemArray = items
+//        }
+        // this lines of codes are not needed for this app !! /Leave it here for future need /
        
         
         
@@ -69,23 +65,23 @@ class TodoListViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         //fucn that show us which row was sellected
         
-        //print(itemArray[indexPath.row])
+        //*print(itemArray[indexPath.row])
         //creating a func that show us which row we sellected , and also show us in our debug /number or the name of the row/
         
-        //tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
+        //*tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
         // creating vie code to have a checmark on the list
         
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         //creating the checkmark so if itemarray is = !- make the oposite , so if            itemarray is true = !false
-
-       
-        tableView.reloadData()
         
-//        if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
-//             tableView.cellForRow(at: indexPath)?.accessoryType = .none
-//        } else {
-//             tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-//        }
+        saveItems()
+        //caling saveitems!
+        
+//  *      if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark {
+//   *          tableView.cellForRow(at: indexPath)?.accessoryType = .none
+//    *    } else {
+//     *        tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
+//      *  }
         //creating if else statemnt that give us a chance to select or unselect whit checkmark indexPath.
         
         tableView.deselectRow(at: indexPath, animated: true)
@@ -111,12 +107,11 @@ class TodoListViewController: UITableViewController {
             newItem.title = textField.text!
             
             self.itemArray.append(newItem)
-            //adding an item to our item array with focrce ! which means it wont be never nil also just becouse we are in clouse we have to add self. to explicete it where this item array exist
+            //adding an item to our item array with focrce ! which means it wont be never nil also just becouse we are in clouse we have to add self. to explicete it where this item array exist .append adds new item and the end of the array 
             
-            self.defaults.set(self.itemArray,forKey: "ToDoListArray")
+           self.saveItems()
+            //bc we call the function but we are in closure and we have to use self.
             
-            self.tableView.reloadData()
-            //once we create the new item , making the tableview to reload
         }
         
         alert.addTextField { (alertTextField) in
@@ -132,5 +127,38 @@ class TodoListViewController: UITableViewController {
     }
     
     
+    //MARK - Model Manupulation Methods
+    
+    func saveItems() {
+        let encoder = PropertyListEncoder()
+        
+        do {
+            let data = try encoder.encode(itemArray)
+            //encode our data into propertylist
+            try data.write(to: dataFilePath!)
+            //write data to in our case dataFilePath and in other for that we have to !!!move our constant outside the class , so we have to make it GLOBAL /market as *1/!!!
+        } catch {
+            print("Error encoding item array,\(error)")
+        }
+        
+        self.tableView.reloadData()
+        //once we create the new item , making the tableview to reload
+    }
+
+    func loadItems() {
+        //creating new func
+        if let data = try? Data(contentsOf: dataFilePath!) {
+            //creating constant setting equal data creating using the contents of datafilepath mark it as try ? which its turn it as an optional so we put IF upfront as well and using !- optional biding for unwrap that safely
+            let decoder = PropertyListDecoder()
+            //creating constant decoder
+            do {
+                 itemArray = try decoder.decode([Item].self , from: data)
+                // method that will decode our data from datafilepath and bc we not specify object in order to reffer type that is array of items we have to write .self and the method need try as well , and then using ( do { } catch {} blcok ! ) 
+            } catch {
+                print("Error decoding item array")
+            }
+           
+        }
+    }
 }
 
