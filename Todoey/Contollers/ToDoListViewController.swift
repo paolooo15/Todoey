@@ -7,33 +7,30 @@
 //
 
 import UIKit
+import CoreData
 
 class TodoListViewController: UITableViewController {
 
     var itemArray = [Item]()
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+    //let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
     //creating obejct that provide interface to the file system using default file manager userDomainMask is users home directory place where we gonna save the personal item assosiate with this current app  /first is bc its array and we want to grab the first item / /.appendigPathComponent is creating our own Plist. !!!/*1 - making global constant in other for use to write a data .!!!
     
+    var selectedCategory : Category? {
+        didSet{
+            loadItems()
+        }
+    }
+    
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     override func viewDidLoad() {
         super.viewDidLoad()
         
-       
+       print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
+        // seeing where our data is saving ... creating a path to where our data is saved
         
-        print(dataFilePath)
-        
-       
-        
-        loadItems()
 
-        
 //        if let  items = defaults.array(forKey: "ToDoListArray") as? [Item] {
 //             //creating that our itemarray to be equal to the new constant defaults, where our NSDATA is saved
-//            itemArray = items
-//        }
-        // this lines of codes are not needed for this app !! /Leave it here for future need /
-       
-        
-        
     
     }
 
@@ -47,7 +44,7 @@ class TodoListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-    let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
+        let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
         
         let item = itemArray[indexPath.row]
         
@@ -103,9 +100,11 @@ class TodoListViewController: UITableViewController {
             //create an action for the alert that we creat , simply we have to add item
             //print("Success!")
             
-            let newItem = Item()
-            newItem.title = textField.text!
             
+            let newItem = Item(context: self.context)
+            newItem.title = textField.text!
+            newItem.done = false
+            newItem.parentCategory = self.selectedCategory
             self.itemArray.append(newItem)
             //adding an item to our item array with focrce ! which means it wont be never nil also just becouse we are in clouse we have to add self. to explicete it where this item array exist .append adds new item and the end of the array 
             
@@ -130,34 +129,75 @@ class TodoListViewController: UITableViewController {
     //MARK - Model Manupulation Methods
     
     func saveItems() {
-        let encoder = PropertyListEncoder()
+        //*2 let encoder = PropertyListEncoder() when using encoda
         
         do {
-            let data = try encoder.encode(itemArray)
+            
+           try context.save()
+            //*2 let data = try encoder.encode(itemArray)
             //encode our data into propertylist
-            try data.write(to: dataFilePath!)
+            //*2 try data.write(to: dataFilePath!)
             //write data to in our case dataFilePath and in other for that we have to !!!move our constant outside the class , so we have to make it GLOBAL /market as *1/!!!
         } catch {
-            print("Error encoding item array,\(error)")
+        //*2    print("Error encoding item array,\(error)")
+            print("Error saving context \(error)")
         }
         
         self.tableView.reloadData()
         //once we create the new item , making the tableview to reload
     }
 
-    func loadItems() {
-        //creating new func
-        if let data = try? Data(contentsOf: dataFilePath!) {
-            //creating constant setting equal data creating using the contents of datafilepath mark it as try ? which its turn it as an optional so we put IF upfront as well and using !- optional biding for unwrap that safely
-            let decoder = PropertyListDecoder()
-            //creating constant decoder
-            do {
-                 itemArray = try decoder.decode([Item].self , from: data)
-                // method that will decode our data from datafilepath and bc we not specify object in order to reffer type that is array of items we have to write .self and the method need try as well , and then using ( do { } catch {} blcok ! ) 
-            } catch {
-                print("Error decoding item array")
+    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest(), predicate: NSPredicate? = nil ) {
+        // - creating external "with" parameter and internal "request" peramater is using isde this block of code , external is using when we call the func
+        
+        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+        
+        if let additionalPredicate = predicate {
+           request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
+        }else {
+            request.predicate = categoryPredicate
+        }
+        
+        
+        do {
+            itemArray = try context.fetch(request) // - "fletch" - ДОСТАВЯМ
+        } catch {
+            print("Error fetching data from context\(error)")
+        }
+        
+        tableView.reloadData()
+        //reload the tabeview with update we made it
+    }
+    
+  
+}
+
+    //MARK - Search Bar methods
+ 
+extension TodoListViewController: UISearchBarDelegate {
+    //creating extension to our class , so we can more easy find out if we have some issues with the search bar.Extending the functionality
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        //requesting the data from our itemArray
+        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        // request out  predicate taking from data whatever we type into searche bar an show us object’s attribute name is equal to value passed in [cd] stands for "c"-for capital or lower case , and "d" for letters in franch or german such as ë í etc.
+        
+       request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        // sort the date on the way we want .. in this case we sort it in alphabetical order
+       
+        loadItems(with: request, predicate: predicate)
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadItems()
+            // cleaning searchbar from what we search previous and with loadItems we get back to original list that we have
+            
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+                //making the search bar to be not the first respond which makse the cursor and the keyboard dissmiss
             }
-           
+            
         }
     }
 }
